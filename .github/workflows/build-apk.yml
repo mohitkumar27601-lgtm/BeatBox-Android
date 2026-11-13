@@ -1,4 +1,4 @@
-
+   
 name: Build Beat Box APK
 
 on:
@@ -10,21 +10,32 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
-      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Extract Android project
+        run: unzip beat-box-android.zip -d source
 
-      - run: unzip beat-box-android.zip -d source
-
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
@@ -32,8 +43,9 @@ jobs:
         working-directory: source
         run: gradle assembleDebug
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: Beat-Box-APK
           path: source/app/build/outputs/apk/debug/app-debug.apk
-          
+
